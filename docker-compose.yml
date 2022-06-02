@@ -1,0 +1,9 @@
+version: "2"
+services:
+  app:
+    image: "registry.gitlab.com/em-in-4/projects-2021"
+    restart: always
+    environment:
+      REDIS_URL: "//redis:6379/"
+    ports:
+      - 1512:8000

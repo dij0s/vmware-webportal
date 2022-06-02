@@ -1,0 +1,9 @@
+node_modules
+client.REST
+.eslintrc.json
+.env
+.dockerignore
+
+client/build
+client/node_modules
+client/npm-debug.log*

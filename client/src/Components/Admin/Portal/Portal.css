@@ -1,0 +1,163 @@
+#request-portal{
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--bg-color);
+}
+
+#request-portal-header{
+    padding: 0;
+    width: 100%;
+    height: 15%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#request-portal-title{
+    margin: 0;
+    padding-left: 80px;
+    width: 60%;
+    font-size: 2em;
+    font-weight: 500;
+}
+
+#request-portal-user-wrapper{
+    width: 12%;
+    height: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#request-portal-dropdown{
+    cursor: pointer;
+}
+
+#request-portal-user-actions{
+    display: none;
+}
+
+#request-portal-user-actions-active{
+    display: block;
+    position: absolute;
+    top: 10%;
+    width: 12%;
+    line-height: 40px;
+    border: 1px solid var(--bg-color);
+    box-shadow: 0px 4px 4px rgba(160, 160, 160, 0.15);
+}
+
+#request-portal-user-actions-logout{
+    padding-left: 10px;
+    cursor: pointer;
+}
+
+#request-portal-logo{
+    width: 20%;
+    height: 100%;
+    background-image: url('../../../Assets/AppWrapper/Login-form-logo.png');
+    background-repeat: no-repeat;
+    background-size: 50%;
+    background-position: center;
+}
+
+#request-wrapper{
+    max-width: 100%;
+    height: 85%;
+    padding: 0 80px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+#request-form,
+#request-more-wrapper{
+    padding-top: 80px;
+    width: 40%;
+    height: 80%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.request-form-input{
+    border: none;
+    border-bottom: 2px solid;
+    border-color: #5f5f5f;
+    font-family: 'Montserrat';
+    color: var(--placeholder-color);
+    background-color: transparent;
+    line-height: 20px;
+}
+
+.request-form-input:focus{
+    outline: none;
+}
+
+.request-form-select{
+    border: none;
+    border-bottom: 2px solid;
+    border-color: #5f5f5f;
+    font-family: 'Montserrat';
+    color: var(--placeholder-color);
+    background-color: transparent;
+    line-height: 20px;
+}
+
+.request-form-select:focus{
+    outline: none;
+}
+
+.request-form-textarea{
+    height: 40%;
+    border: none;
+    border-bottom: 2px solid;
+    border-color: #5f5f5f;
+    background: transparent;
+    font-family: 'Montserrat';
+    color: var(--placeholder-color);
+    outline: none;
+    resize: none;
+}
+
+#request-form-project-details-wrapper{
+    display: flex;
+    justify-content: space-between;
+}
+
+#request-form-project-numero{
+    width: 65%;
+}
+
+#request-details-wrapper{
+    height: 60%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+#request-form-submit{
+    width: 100%;
+    height: 55px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--button-color);
+    font-weight: 400;
+    color: var(--white-fc);
+    cursor: pointer;
+    transition: background-color .5s ease;
+}
+
+#request-form-submit-grayedout{
+    width: 100%;
+    height: 55px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--button-color-grayedout);
+    font-weight: 400;
+    color: var(--grayedout-fc);
+    cursor: not-allowed;
+    transition: background-color .5s ease;
+}

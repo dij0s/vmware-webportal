@@ -1,0 +1,99 @@
+#request-confirmation{
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--bg-color);
+}
+
+#request-confirmation-header{
+    padding: 0;
+    width: 100%;
+    height: 15%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#request-confirmation-title{
+    margin: 0;
+    padding-left: 80px;
+    width: 60%;
+    font-size: 2em;
+    font-weight: 500;
+}
+
+#request-confirmation-logo{
+    width: 20%;
+    height: 100%;
+    background-image: url('../../../Assets/AppWrapper/Login-form-logo.png');
+    background-repeat: no-repeat;
+    background-size: 50%;
+    background-position: center;
+}
+
+#request-confirmation-wrapper{
+    width: 100%;
+    height: 65%;
+    padding-top: 80px;
+    display: flex;
+    flex-direction: row;
+}
+
+#request-confirmation-more,
+#request-confirmation-design{
+    width: 50%;
+    height: 100%;
+}
+
+#request-confirmation-more-wrapper{
+    height: 100%;
+    padding-left: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+#request-confirmation-more-text{
+    width: 80%;
+}
+
+#request-confirmation-more-text-minor{
+    padding-top: 60px;
+}
+
+p{
+    margin: 0;
+    font-size: 1.2em;
+}
+
+#request-confirmation-back{
+    width: 70%;
+    height: 55px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--button-color);
+    font-weight: 400;
+    color: var(--white-fc);
+    cursor: pointer;
+}
+
+#request-confirmation-design{
+    display: flex;
+    justify-content: center;
+}
+
+#request-confirmation-design svg{
+    height: 100%;
+}
+
+#request-confirmation-design-email{
+    animation: jiggle 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes jiggle {
+    from {
+        transform: translateY(0%);
+    } to {
+        transform: translateY(1%);
+    }
+}
