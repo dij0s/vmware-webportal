@@ -1,5 +1,6 @@
 node_modules
 client.REST
+vcenterdos.REST
 .eslintrc.json
 .env
 .dockerignore

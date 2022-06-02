@@ -1,6 +1,6 @@
 const NOTIFICATIONS = {
   FROM: '"VMware Web Portal" <noreply.vmware-web-portal@hevs.ch>',
-  TO: 'dion.osmani@hevs.ch',
+  TO: 'dion.osmani@hevs.ch, christophe.pignat@hevs.ch',
   SUBJECT: "Nouvelle demande de création d'une machine virtuelle"
 }
 

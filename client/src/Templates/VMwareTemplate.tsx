@@ -36,7 +36,7 @@ const generateVMtemplate = (Name: String, Description: String, Site: string) => 
     },
     hardware_customization: {
       memory_update: {
-        memory: 4000
+        memory: 4096
       },
       nics: {
         4000: {

@@ -1,0 +1,2 @@
+POST http://vcenterdos.hevs.ch/api/session
+Authorization: Basic X1Byb3h5QXV0b21hdGlvbkB2c3BoZXJlZG9zLmxvY2FsOkc4Yjd0NUo4VjBwRFBsaURCTUku

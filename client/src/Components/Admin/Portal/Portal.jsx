@@ -96,7 +96,7 @@ export default function Portal() {
                         })
                     }).then(() => {
                         setCookie('v-last', vmName)
-                        // window.location.assign('/confirmation')
+                        window.location.assign('/confirmation')
                     })
                 }
             }, (err) => {

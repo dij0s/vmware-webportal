@@ -52,7 +52,7 @@ app.delete('/api/v1/auth/logout', checkVMwareAPISession, (req, res) => {
 app.post('/api/v1/auth', (req, res) => {
   const authHeader = req.headers.authorization
   const token = authHeader
-  if (token == null) res.sendStatus(401)
+  if (token === null) res.sendStatus(401)
 
   fetch(`${process.env.VCENTER_URL}/api/session`, {
     method: 'POST',
@@ -81,28 +81,41 @@ app.post('/api/v1/notify', checkVMwareAPISession, (req, res) => {
     to: NOTIFICATIONS.TO,
     subject: NOTIFICATIONS.SUBJECT,
     html: generateMail(req.body.user, req.body.vm, req.body.description, req.body.remarques)
-  }).then((data) => {
-    console.log(data.messageId)
+  }).then(() => {
     res.sendStatus(200)
-  }, (err) => {
-    console.log(err)
+  }, (error) => {
+    console.log(error)
     res.sendStatus(500)
   })
 })
 
 app.post('/api/v1/:host/vmtemplate/library/deploy/:tli', (req, res) => {
-  const VMwareAPISession = decryptVAPISID(process.env.API_ServiceAccount_SID)
-  fetch(`https://${req.params.host}/api/vcenter/vm-template/library-items/${req.params.tli}?action=deploy`, {
+  const SERVICE_ACCOUNT_B64 = process.env.API_ServiceAccount
+  fetch('http://localhost:8000/api/v1/auth', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'vmware-api-session-id': `${VMwareAPISession}`
-    },
-    body: req.body
+    headers: { Authorization: `Basic ${SERVICE_ACCOUNT_B64}` }
   }).then((response) => {
-    res.sendStatus(response.status)
-    console.log(res)
-  })
+    if (response.status === 200) {
+      const VMWARE_API_SESSION_ID = response.headers.get('vmware-api-session-id')
+      const VMwareAPISession = decryptVAPISID(VMWARE_API_SESSION_ID)
+      fetch(`https://${req.params.host}/api/vcenter/vm-template/library-items/${req.params.tli}?action=deploy`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'vmware-api-session-id': `${VMwareAPISession}`
+        },
+        body: JSON.stringify(req.body)
+      }).then((response) => {
+        fetch('http://localhost:8000/api/v1/auth', {
+          method: 'DELETE',
+          headers: { 'vmware-api-session-id': `${VMwareAPISession}` }
+        })
+        res.sendStatus(response.status)
+      }, (err) => {
+        console.log(err)
+      })
+    } else res.sendStatus(response.status)
+  }, (error) => console.log(error))
 })
 
 app.listen(8000)
