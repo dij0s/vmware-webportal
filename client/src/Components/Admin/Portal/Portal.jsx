@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useCookies } from 'react-cookie'
+import Select from 'react-select'
 
-import { generateVMtemplate, TEMPLATES } from '../../../Templates/VMwareTemplate.tsx'
+import { generateVMtemplate, generateTag, generateTagAttachment, TEMPLATES, TAGS } from '../../../Templates/VMwareTemplate.tsx'
 
 import { BiUser } from 'react-icons/bi'
 import { RiArrowDropDownLine } from 'react-icons/ri'
@@ -11,22 +12,27 @@ import './Portal.css'
 export default function Portal() {
     const [cookies, setCookie, removeCookies] = useCookies()
     const [username, setUsername] = useState('')
+    const [createdTags, setCreatedTags] = useState([])
+    const [userEntries, setUserEntries] = useState([])
     
     const V_API_SID = cookies['v-api-sid']
     useEffect(() => {
         fetch(`${API_ROOT_ENDPOINT}/auth/userinformation`, { 
             method: 'GET',
-            headers: { 
-               'vmware-api-session-id': V_API_SID 
-            } 
+            headers: { 'vmware-api-session-id': V_API_SID }
         }).then((data) => {
             if (data.status !== 401) { data.text().then((username) => setUsername(username)) } else { window.location.assign('/') }
         })
+
+        fetch(`${API_ROOT_ENDPOINT}/users`, {
+            method: 'GET',
+            headers: { 'vmware-api-session-id': V_API_SID }        
+        }).then((response) => response.json().then((data) => setUserEntries(data)))
     }, [V_API_SID])
 
     const API_ROOT_ENDPOINT = '/api/v1'
        
-    const [formInputs, setFormInputs] = useState([ {cn:'project', value:''}, {cn:'institut', value:''}, {cn: 'projectNumber', value:''}, {cn: 'unite', value:''}, {cn: 'responsableTechnique', value:''}, {cn: 'responsableMetier', value:''}, {cn: 'os', value:''}, {cn: 'description', value:''}, {cn: 'remarques', value:''} ])
+    const [formInputs, setFormInputs] = useState([ {cn:'project', value:''}, {cn:'institut', value:''}, {cn: 'projectNumber', value:'', tag: 'PRJ_Numero'}, {cn: 'unite', value:'', tag: 'PRJ_Unite'}, {cn: 'responsableTechnique', value:'', tag: 'PRJ_RespTechnique'}, {cn: 'responsableMetier', value:'', tag: 'PRJ_RespMetier'}, {cn: 'os', value:'', tag: 'OS'}, {cn: 'description', value:''}, {cn: 'remarques', value:''} ])
     const [buttonActivated, setButtonActivated] = useState(false)
 
     const [dropdownActive, setDropdownActive] = useState(false)
@@ -40,6 +46,15 @@ export default function Portal() {
         )
     }
 
+    const handleFormInputChange = (value, cn) => {
+        const i = formInputs.findIndex((input) => input.cn === cn)
+        setFormInputs([ 
+            ...formInputs.slice(0, i),
+            Object.assign({}, formInputs[i], { cn:cn, value:value }),
+            ...formInputs.slice(i+1)]
+        )
+    }
+
     const handleDropdown = () => {
         setDropdownActive(!dropdownActive)
     }
@@ -47,9 +62,7 @@ export default function Portal() {
     const handleLogout = () => {
         fetch(`${API_ROOT_ENDPOINT}/auth/logout`, {
             method: 'DELETE',
-            headers: { 
-                'vmware-api-session-id': V_API_SID,
-            }
+            headers: { 'vmware-api-session-id': V_API_SID }
         }).then(() => {
             removeCookies('v-api-sid')
         })
@@ -61,8 +74,8 @@ export default function Portal() {
     }, [formInputs])
 
     const handleFormSubmit = () => {
-        if (buttonActivated) {
-            const institut = formInputs.at(formInputs.findIndex((item) => item.cn === 'institut')).value
+    if (buttonActivated) {
+        const institut = formInputs.at(formInputs.findIndex((item) => item.cn === 'institut')).value
             let site = ''
             if (institut === 'II') {site = 'BEL'} else {site = 'ENP'}
 
@@ -74,34 +87,73 @@ export default function Portal() {
             const TLI = TEMPLATES[site][os]
             const HOST = TEMPLATES[site].HOST
 
-            fetch(`${API_ROOT_ENDPOINT}/${HOST}/vmtemplate/library/deploy/${TLI}`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json'
-                },
-                body: generateVMtemplate(vmName, vmDescription, site)
-            }).then((res) => {
-                if(res.status === 200){
-                    fetch(`${API_ROOT_ENDPOINT}/notify`, {
-                        method: 'POST',
-                        headers: { 
-                            'vmware-api-session-id': V_API_SID,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            user: username,
-                            vm: vmName,
-                            description: vmDescription,
-                            remarques: vmRemarques
-                        })
-                    }).then(() => {
-                        setCookie('v-last', vmName)
-                        window.location.assign('/confirmation')
-                    })
-                }
-            }, (err) => {
-                console.log(err)
+            formInputs.filter((input) => input.hasOwnProperty('tag')).forEach((input) => {
+                fetch(`${API_ROOT_ENDPOINT}/cis/tags/add`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: generateTag(TAGS[input.tag], input.value)
+                }).then((res) => res.json().then((urn) => {
+                    if (typeof urn === 'string'){
+                        setCreatedTags([...createdTags, urn])
+                    }
+                }))
             })
+            console.log(createdTags)
+
+
+            // fetch(`${API_ROOT_ENDPOINT}/cis/tags/attach`, {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     body: JSON.stringify(generateTagAttachment('vm-165524', createdTags))
+            // })
+
+            // fetch(`${API_ROOT_ENDPOINT}/${HOST}/vmtemplate/library/deploy/${TLI}`, {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     body: generateVMtemplate(vmName, vmDescription, site)
+            // }).then((res) => {  
+            //     if (res.status === 200) {
+            //         res.json().then((id) => {
+            //             let createdTags = []
+            //             formInputs.filter((input) => input.hasOwnProperty('tag')).forEach((input) => {
+            //                 fetch(`${API_ROOT_ENDPOINT}/cis/tags/add`, {
+            //                     method: 'POST',
+            //                     headers: { 'Content-Type': 'application/json' },
+            //                     body: generateTag(TAGS[input.tag], input.value)
+            //                 }).then((res) => res.json().then((urn) => {
+            //                     if (!urn.hasOwnProperty('error_type')) {
+            //                         createdTags.push(urn)
+            //                     } else {
+
+            //                     }
+            //                 }))
+            //             })
+            //             fetch(`${API_ROOT_ENDPOINT}/cis/tags/attach`, {
+            //                 method: 'POST',
+            //                 headers: { 'Content-Type': 'application/json' },
+            //                 body: generateTagAttachment(id, createdTags)
+            //             })
+            //             fetch(`${API_ROOT_ENDPOINT}/notify`, {
+            //                 method: 'POST',
+            //                 headers: {
+            //                     'vmware-api-session-id': V_API_SID,
+            //                     'Content-Type': 'application/json'
+            //                 },
+            //                 body: JSON.stringify({
+            //                     user: username,
+            //                     vm: vmName,
+            //                     description: vmDescription,
+            //                     remarques: vmRemarques
+            //                 })
+            //             }).then(() => {
+            //                 setCookie('v-last', vmName)
+            //                 // window.location.assign('/confirmation')
+            //             })
+            //         })
+            //     }
+            // }, (err) => {
+            //     console.log(err)
+            // })
         }
     }
 
@@ -121,7 +173,7 @@ export default function Portal() {
             </header>
             <div id='request-wrapper'>
                 <div id='request-form'>
-                    <input type='text' data-cn='project' name='request-form-project' id='request-form-project' spellCheck='false' className='request-form-input' placeholder='Nom du projet' onInput={(e) => (handleFormInput(e))} />
+                    <input type='text' data-cn='project' name='request-form-project' id='request-form-project' spellCheck='false' className='request-form-input' placeholder='Nom du projet' maxLength='10' onInput={(e) => (handleFormInput(e))} />
                     <select data-cn='institut' name='request-form-institut' id='request-form-institut' className='request-form-select' defaultValue='' onInput={(e) => (handleFormInput(e))}>
                         <option value='' disabled>Institut</option>
                         <option value='II'>II</option>
@@ -131,8 +183,8 @@ export default function Portal() {
                         <input type='text' data-cn='projectNumber' name='request-form-project-numero' id='request-form-project-numero' spellCheck='false' className='request-form-input' placeholder='Num&eacute;ro de projet' onInput={(e) => (handleFormInput(e))} />
                         <input type='text' data-cn='unite' name='request-form-project-unite' id='request-form-project-unite' spellCheck='false' className='request-form-input' placeholder='Unit&eacute;' onInput={(e) => (handleFormInput(e))} />
                     </div>
-                    <input type='text' data-cn='responsableTechnique' name='request-form-resp-technique' id='request-form-resp-technique' spellCheck='false' className='request-form-input' placeholder='Responsable technique' onInput={(e) => (handleFormInput(e))} />
-                    <input type='text' data-cn='responsableMetier' name='request-form-resp-metier' id='request-form-resp-metier' spellCheck='false' className='request-form-input' placeholder='Responsable métier' onInput={(e) => (handleFormInput(e))} />
+                    <Select options={userEntries} noOptionsMessage={(input) => {return `Aucune correspondance pour "${input.inputValue}"`}} placeholder='Responsable Technique' data-cn='responsableTechnique' id='request-form-resp-technique' className='request-form-input' onChange={(option) => handleFormInputChange(option.value, 'responsableMetier')} />
+                    <Select options={userEntries} noOptionsMessage={(input) => {return `Aucune correspondance pour "${input.inputValue}"`}} placeholder='Responsable Métier' data-cn='responsableMetier' id='request-form-resp-metier' className='request-form-input' onChange={(option) => handleFormInputChange(option.value, 'responsableTechnique')} />
                     <select data-cn='os' name='request-form-os' id='request-form-os' className='request-form-select' defaultValue='' onInput={(e) => (handleFormInput(e))} >
                         <option value='' disabled>Syst&egrave;me d&#39;exploitation</option>
                         <option value='MS_TLI'>Microsoft Windows Server 2019</option>
@@ -144,8 +196,10 @@ export default function Portal() {
                         <textarea  data-cn='description' name='request-form-description' id='request-form-description' className='request-form-textarea' placeholder='Description'  onInput={(e) => (handleFormInput(e))}></textarea>
                         <textarea  data-cn='remarques' name='request-form-remarques' id='request-form-remarques' className='request-form-textarea' placeholder='Remarques' onInput={(e) => (handleFormInput(e))}></textarea>
                     </div>
-                    <div id={`request-form-submit${buttonActivated ? '' : '-grayedout'}`} onClick={() => (handleFormSubmit())}>
-                        <span id='login-form-submit-text'>Soumettre la demande</span>
+                    <div id="request-submit-wrapper">
+                        <div id={`request-form-submit${buttonActivated ? '' : '-grayedout'}`} onClick={() => (handleFormSubmit())}>
+                            <span id='login-form-submit-text'>Soumettre la demande</span>
+                        </div>
                     </div>
                 </div>     
             </div>
