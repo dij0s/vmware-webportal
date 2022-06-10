@@ -20,11 +20,31 @@ const decryptVAPISID = (encryptedVAPISID) => {
   return cryptoJs.enc.Utf8.stringify(cryptoJs.AES.decrypt(encryptedVAPISID, process.env.API_SID_SECRETKEY))
 }
 
+const handleExistingTag = (VMwareAPISession, tag) => new Promise((resolve, reject) => {
+  fetch(`https://${process.env.VCENTER_FALLBACK_HOST}/api/cis/tagging/tag?action=list-tags-for-category`, {
+    method: 'POST',
+    headers: {
+      'vmware-api-session-id': `${VMwareAPISession}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ category_id: tag.category_id })
+  }).then((response) => response.json().then((urns) => {
+    urns.forEach(urn => {
+      fetch(`https://${process.env.VCENTER_FALLBACK_HOST}/api/cis/tagging/tag/${urn}`, {
+        method: 'GET',
+        headers: { 'vmware-api-session-id': `${VMwareAPISession}` }
+      }).then((response) => response.json().then((tagref) => {
+        if (tagref.name === tag.name) resolve(tagref.id)
+      }, (error) => reject(error)))
+    })
+  }, (error) => reject(error)))
+})
+
 app.post('/api/v1/:host/vmtemplate/library/deploy/:tli', (req, res) => {
   const SERVICE_ACCOUNT = process.env.API_ServiceAccount
   const wordArraySA = cryptoJs.enc.Utf8.parse(SERVICE_ACCOUNT)
   const SERVICE_ACCOUNT_B64 = cryptoJs.enc.Base64.stringify(wordArraySA)
-  fetch('http://localhost:8000/api/v1/auth', {
+  fetch(`http://localhost:8000/api/v1/${req.params.host}/auth`, {
     method: 'POST',
     headers: { Authorization: `Basic ${SERVICE_ACCOUNT_B64}` }
   }).then((response) => {
@@ -51,9 +71,10 @@ app.post('/api/v1/:host/vmtemplate/library/deploy/:tli', (req, res) => {
   }, (error) => console.log(error))
 })
 
-app.get('/api/v1/auth/userinformation', checkVMwareAPISession, (req, res) => {
+app.get('/api/v1/:host?/auth/userinformation', checkVMwareAPISession, (req, res) => {
   const VMwareAPISession = decryptVAPISID(req.headers['vmware-api-session-id'])
-  fetch(`${process.env.VCENTER_URL}/api/session`, {
+  const VCENTER_ENDPOINT = req.params.host ?? process.env.VCENTER_FALLBACK_HOST
+  fetch(`https://${VCENTER_ENDPOINT}/api/session`, {
     headers: { 'vmware-api-session-id': `${VMwareAPISession}` }
   }).then((response) => {
     response.json().then((data) => {
@@ -66,9 +87,10 @@ app.get('/api/v1/auth/userinformation', checkVMwareAPISession, (req, res) => {
   })
 })
 
-app.delete('/api/v1/auth/logout', checkVMwareAPISession, (req, res) => {
+app.delete('/api/v1/:host?/auth/logout', checkVMwareAPISession, (req, res) => {
   const VMwareAPISession = decryptVAPISID(req.headers['vmware-api-session-id'])
-  fetch(`${process.env.VCENTER_URL}/api/session`, {
+  const VCENTER_ENDPOINT = req.params.host ?? process.env.VCENTER_FALLBACK_HOST
+  fetch(`https://${VCENTER_ENDPOINT}/api/session`, {
     method: 'DELETE',
     headers: { 'vmware-api-session-id': `${VMwareAPISession}` }
   }).then((response) => {
@@ -79,7 +101,7 @@ app.delete('/api/v1/auth/logout', checkVMwareAPISession, (req, res) => {
   })
 })
 
-app.post('api/v1/cis/tags/attach', (req, res) => {
+app.post('/api/v1/cis/tags/attach', (req, res) => {
   const SERVICE_ACCOUNT = process.env.API_ServiceAccount
   const wordArraySA = cryptoJs.enc.Utf8.parse(SERVICE_ACCOUNT)
   const SERVICE_ACCOUNT_B64 = cryptoJs.enc.Base64.stringify(wordArraySA)
@@ -90,7 +112,7 @@ app.post('api/v1/cis/tags/attach', (req, res) => {
     if (response.status === 200) {
       const VMWARE_API_SESSION_ID = response.headers.get('vmware-api-session-id')
       const VMwareAPISession = decryptVAPISID(VMWARE_API_SESSION_ID)
-      fetch(`${process.env.VCENTER_URL}/api/cis/tagging/tag-association?action=attach-multiple-tags-to-object`, {
+      fetch(`https://${process.env.VCENTER_FALLBACK_HOST}/api/cis/tagging/tag-association?action=attach-multiple-tags-to-object`, {
         method: 'POST',
         headers: {
           'vmware-api-session-id': `${VMwareAPISession}`,
@@ -110,7 +132,7 @@ app.post('api/v1/cis/tags/attach', (req, res) => {
   }, (error) => console.log(error))
 })
 
-app.get('/api/v1/cis/tags/get', (req, res) => {
+app.post('/api/v1/cis/tags/add/', (req, res) => {
   const SERVICE_ACCOUNT = process.env.API_ServiceAccount
   const wordArraySA = cryptoJs.enc.Utf8.parse(SERVICE_ACCOUNT)
   const SERVICE_ACCOUNT_B64 = cryptoJs.enc.Base64.stringify(wordArraySA)
@@ -121,7 +143,7 @@ app.get('/api/v1/cis/tags/get', (req, res) => {
     if (response.status === 200) {
       const VMWARE_API_SESSION_ID = response.headers.get('vmware-api-session-id')
       const VMwareAPISession = decryptVAPISID(VMWARE_API_SESSION_ID)
-      fetch(`${process.env.VCENTER_URL}/api/cis/tagging/tag`, {
+      fetch(`https://${process.env.VCENTER_FALLBACK_HOST}/api/cis/tagging/tag`, {
         method: 'POST',
         headers: {
           'vmware-api-session-id': `${VMwareAPISession}`,
@@ -129,7 +151,11 @@ app.get('/api/v1/cis/tags/get', (req, res) => {
         },
         body: JSON.stringify(req.body)
       }).then((response) => {
-        response.json().then((data) => res.status(response.status).json(data))
+        if (response.status === 201) {
+          response.json().then((data) => res.status(response.status).json(data))
+        } else {
+          handleExistingTag(VMwareAPISession, req.body).then((urn) => res.status(201).json(urn))
+        }
         fetch('http://localhost:8000/api/v1/auth', {
           method: 'DELETE',
           headers: { 'vmware-api-session-id': `${VMwareAPISession}` }
@@ -141,43 +167,13 @@ app.get('/api/v1/cis/tags/get', (req, res) => {
   }, (error) => console.log(error))
 })
 
-app.post('/api/v1/cis/tags/add', (req, res) => {
-  const SERVICE_ACCOUNT = process.env.API_ServiceAccount
-  const wordArraySA = cryptoJs.enc.Utf8.parse(SERVICE_ACCOUNT)
-  const SERVICE_ACCOUNT_B64 = cryptoJs.enc.Base64.stringify(wordArraySA)
-  fetch('http://localhost:8000/api/v1/auth', {
-    method: 'POST',
-    headers: { Authorization: `Basic ${SERVICE_ACCOUNT_B64}` }
-  }).then((response) => {
-    if (response.status === 200) {
-      const VMWARE_API_SESSION_ID = response.headers.get('vmware-api-session-id')
-      const VMwareAPISession = decryptVAPISID(VMWARE_API_SESSION_ID)
-      fetch(`${process.env.VCENTER_URL}/api/cis/tagging/tag`, {
-        method: 'POST',
-        headers: {
-          'vmware-api-session-id': `${VMwareAPISession}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(req.body)
-      }).then((response) => {
-        response.json().then((data) => res.status(response.status).json(data))
-        fetch('http://localhost:8000/api/v1/auth', {
-          method: 'DELETE',
-          headers: { 'vmware-api-session-id': `${VMwareAPISession}` }
-        })
-      }, (error) => {
-        console.log(error)
-      })
-    } else res.sendStatus(response.status)
-  }, (error) => console.log(error))
-})
-
-app.post('/api/v1/auth', (req, res) => {
+app.post('/api/v1/:host?/auth', (req, res) => {
   const authHeader = req.headers.authorization
   const token = authHeader
   if (token === null) res.sendStatus(401)
 
-  fetch(`${process.env.VCENTER_URL}/api/session`, {
+  const VCENTER_ENDPOINT = req.params.host ?? process.env.VCENTER_FALLBACK_HOST
+  fetch(`https://${VCENTER_ENDPOINT}/api/session`, {
     method: 'POST',
     headers: { Authorization: `${token}` }
   }).then((response) => {
