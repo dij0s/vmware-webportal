@@ -12,10 +12,11 @@ import './Portal.css'
 export default function Portal() {
     const [cookies, setCookie, removeCookies] = useCookies()
     const [username, setUsername] = useState('')
-    const [createdTags, setCreatedTags] = useState([])
     const [userEntries, setUserEntries] = useState([])
     
+    const API_ROOT_ENDPOINT = '/api/v1'
     const V_API_SID = cookies['v-api-sid']
+
     useEffect(() => {
         fetch(`${API_ROOT_ENDPOINT}/auth/userinformation`, { 
             method: 'GET',
@@ -30,7 +31,6 @@ export default function Portal() {
         }).then((response) => response.json().then((data) => setUserEntries(data)))
     }, [V_API_SID])
 
-    const API_ROOT_ENDPOINT = '/api/v1'
        
     const [formInputs, setFormInputs] = useState([ {cn:'project', value:''}, {cn:'institut', value:''}, {cn: 'projectNumber', value:'', tag: 'PRJ_Numero'}, {cn: 'unite', value:'', tag: 'PRJ_Unite'}, {cn: 'responsableTechnique', value:'', tag: 'PRJ_RespTechnique'}, {cn: 'responsableMetier', value:'', tag: 'PRJ_RespMetier'}, {cn: 'os', value:'', tag: 'OS'}, {cn: 'description', value:''}, {cn: 'remarques', value:''} ])
     const [buttonActivated, setButtonActivated] = useState(false)
@@ -74,8 +74,8 @@ export default function Portal() {
     }, [formInputs])
 
     const handleFormSubmit = () => {
-    if (buttonActivated) {
-        const institut = formInputs.at(formInputs.findIndex((item) => item.cn === 'institut')).value
+        if (buttonActivated) {
+            const institut = formInputs.at(formInputs.findIndex((item) => item.cn === 'institut')).value
             let site = ''
             if (institut === 'II') {site = 'BEL'} else {site = 'ENP'}
 
@@ -87,73 +87,52 @@ export default function Portal() {
             const TLI = TEMPLATES[site][os]
             const HOST = TEMPLATES[site].HOST
 
-            formInputs.filter((input) => input.hasOwnProperty('tag')).forEach((input) => {
-                fetch(`${API_ROOT_ENDPOINT}/cis/tags/add`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: generateTag(TAGS[input.tag], input.value)
-                }).then((res) => res.json().then((urn) => {
-                    if (typeof urn === 'string'){
-                        setCreatedTags([...createdTags, urn])
-                    }
-                }))
+            fetch(`${API_ROOT_ENDPOINT}/${HOST}/vmtemplate/library/deploy/${TLI}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: generateVMtemplate(vmName, vmDescription, site)
+            }).then((res) => {  
+                if (res.status === 200) {
+                    res.json().then((id) => {
+                        let tags = []
+                        const tagsPromises = formInputs.filter((input) => input.hasOwnProperty('tag')).map(input => {
+                            fetch(`${API_ROOT_ENDPOINT}/cis/tags/add`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: generateTag(TAGS[input.tag], input.value)
+                            }).then((res) => res.json().then((urn) => tags.push(urn)))
+                        });
+                        Promise.all(tagsPromises).then(() => {
+                            fetch(`${API_ROOT_ENDPOINT}/cis/tags/attach`, {
+                                method: 'POST',
+                                headers: {
+                                    'vmware-api-session-id': V_API_SID,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: generateTagAttachment(id, Array.from(tags))
+                            })
+                        })
+                        fetch(`${API_ROOT_ENDPOINT}/notify`, {
+                            method: 'POST',
+                            headers: {
+                                'vmware-api-session-id': V_API_SID,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                user: username,
+                                vm: vmName,
+                                description: vmDescription,
+                                remarques: vmRemarques
+                            })
+                        }).then(() => {
+                            setCookie('v-last', vmName)
+                            // window.location.assign('/confirmation')
+                        })
+                    })
+                }
+            }, (err) => {
+                console.log(err)
             })
-            console.log(createdTags)
-
-
-            // fetch(`${API_ROOT_ENDPOINT}/cis/tags/attach`, {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify(generateTagAttachment('vm-165524', createdTags))
-            // })
-
-            // fetch(`${API_ROOT_ENDPOINT}/${HOST}/vmtemplate/library/deploy/${TLI}`, {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: generateVMtemplate(vmName, vmDescription, site)
-            // }).then((res) => {  
-            //     if (res.status === 200) {
-            //         res.json().then((id) => {
-            //             let createdTags = []
-            //             formInputs.filter((input) => input.hasOwnProperty('tag')).forEach((input) => {
-            //                 fetch(`${API_ROOT_ENDPOINT}/cis/tags/add`, {
-            //                     method: 'POST',
-            //                     headers: { 'Content-Type': 'application/json' },
-            //                     body: generateTag(TAGS[input.tag], input.value)
-            //                 }).then((res) => res.json().then((urn) => {
-            //                     if (!urn.hasOwnProperty('error_type')) {
-            //                         createdTags.push(urn)
-            //                     } else {
-
-            //                     }
-            //                 }))
-            //             })
-            //             fetch(`${API_ROOT_ENDPOINT}/cis/tags/attach`, {
-            //                 method: 'POST',
-            //                 headers: { 'Content-Type': 'application/json' },
-            //                 body: generateTagAttachment(id, createdTags)
-            //             })
-            //             fetch(`${API_ROOT_ENDPOINT}/notify`, {
-            //                 method: 'POST',
-            //                 headers: {
-            //                     'vmware-api-session-id': V_API_SID,
-            //                     'Content-Type': 'application/json'
-            //                 },
-            //                 body: JSON.stringify({
-            //                     user: username,
-            //                     vm: vmName,
-            //                     description: vmDescription,
-            //                     remarques: vmRemarques
-            //                 })
-            //             }).then(() => {
-            //                 setCookie('v-last', vmName)
-            //                 // window.location.assign('/confirmation')
-            //             })
-            //         })
-            //     }
-            // }, (err) => {
-            //     console.log(err)
-            // })
         }
     }
 

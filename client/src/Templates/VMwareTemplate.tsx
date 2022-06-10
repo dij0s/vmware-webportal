@@ -11,20 +11,20 @@ const VSPHERE={
     RESOURCE_POOL: 'resgroup-27',
     FOLDER: 'group-v25109',
     DATASTORE: 'datastore-61',
-    NETWORK: 'network-131'
+    NETWORK: 'dvportgroup-38'
   }
 }
 
 const TEMPLATES={
   BEL: {
     HOST: 'vabelvcenter.hevs.ch',
-    MS_TLI: 'd33c95ca-6935-4400-ac7c-fd37fc1678df',
-    LX_TLI: '7166fb92-3c5e-4da7-8f11-6188f9005e4e'
+    MS_TLI: 'a28e52fd-06a5-434f-9a5b-1350ad3aa7c8',
+    LX_TLI: '1802a72b-e562-412e-9674-ab20fbcbc85b'
   },
   ENP: {
     HOST: 'vaenpvcenter.hevs.ch',
-    MS_TLI: 'fbc9e603-347e-4d19-977d-b35600248ebd',
-    LX_TLI: 'fbc9e603-347e-4d19-977d-b35600248ebd'
+    MS_TLI: '8cb39db4-2607-4eff-9192-6b6d5377c1d8',
+    LX_TLI: '6c58dc1e-5a31-4d19-a937-a24f822ed90e'
   }
 }
 
@@ -71,13 +71,13 @@ const generateTag = (Category_id: Number, Name: String) => {
   })
 }
 
-const generateTagAttachment = (ID: String, Tag_ids: []) => {
+const generateTagAttachment = (ID: String, Tags: String) => {
   return JSON.stringify({
     object_id: {
       id: ID,
       type: "VirtualMachine"
     },
-    tag_ids: Tag_ids
+    tag_ids: Tags
   })
 }
 

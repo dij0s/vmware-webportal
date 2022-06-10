@@ -1,0 +1,15 @@
+{
+  "type": "module",
+  "name": "cleanup",
+  "version": "1.0.0",
+  "description": "This script will clear every tag of the production environment",
+  "main": "clearTags.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-fetch": "^3.2.5"
+  }
+}
